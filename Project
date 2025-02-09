@@ -1,0 +1,340 @@
+1. Data Input Interface 
+Dynamic Scorecard Tool using React, Node.js, and MongoDB:
+
+Frontend (React)
+
+jsx
+import React, { useState } from 'react';
+import axios from 'axios';
+
+function DataInputForm() {
+  const [criteriaCategories, setCriteriaCategories] = useState([]);
+  const [inputData, setInputData] = useState({});
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      const response = await axios.post('/api/input-data', inputData);
+      console.log(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleCategoryChange = (event) => {
+    const selectedCategories = event.target.value;
+    setCriteriaCategories(selectedCategories);
+  };
+
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+    setInputData({ ...inputData, [name]: value });
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <select multiple value={criteriaCategories} onChange={handleCategoryChange}>
+        <option value="productivity">Productivity</option>
+        <option value="quality">Quality</option>
+        <option value="timeliness">Timeliness</option>
+      </select>
+      {criteriaCategories.map((category) => (
+        <div key={category}>
+          <label>{category}</label>
+          <input type="text" name={category} value={inputData[category]} onChange={handleInputChange} />
+        </div>
+      ))}
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+
+export default DataInputForm;
+
+
+Backend (Node.js)
+
+const express = require('express');
+const app = express();
+const mongoose = require('mongoose');
+
+mongoose.connect('mongodb://localhost/scorecard', { useNewUrlParser: true, useUnifiedTopology: true });
+
+const inputDataSchema = new mongoose.Schema({
+  criteriaCategories: [{ type: String }],
+  inputData: [{ type: String }],
+});
+
+const InputData = mongoose.model('InputData', inputDataSchema);
+
+app.post('/api/input-data', async (req, res) => {
+  try {
+    const inputData = new InputData(req.body);
+    await inputData.save();
+    res.send({ message: 'Input data saved successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: 'Error saving input data' });
+  }
+});
+
+app.listen(3000, () => {
+  console.log('Server listening on port 3000');
+});
+
+2. Score Calculation feature:
+
+Score Calculation Algorithm
+
+// Define a scoring algorithm function
+function calculateScore(data, weights, scoringLogic) {
+  let score = 0;
+  Object.keys(data).forEach((category) => {
+    const categoryScore = scoringLogic[category](data[category]);
+    score += categoryScore * weights[category];
+  });
+  return score;
+}
+
+// Define scoring logic functions for each category
+const scoringLogic = {
+  productivity: (value) => value / 100,
+  quality: (value) => value / 5,
+  timeliness: (value) => value / 10,
+};
+
+// Define default weights for each category
+const defaultWeights = {
+  productivity: 0.3,
+  quality: 0.2,
+  timeliness: 0.5,
+};
+
+
+Dynamic Customization of Weights and Scoring Logic
+
+// Create a settings object to store custom weights and scoring logic
+const settings = {
+  weights: { ...defaultWeights },
+  scoringLogic: { ...scoringLogic },
+};
+
+// Function to update custom weights
+function updateWeights(newWeights) {
+  settings.weights = newWeights;
+}
+
+// Function to update custom scoring logic
+function updateScoringLogic(newScoringLogic) {
+  settings.scoringLogic = newScoringLogic;
+}
+
+
+Example Usage
+
+// Input data
+const data = {
+  productivity: 80,
+  quality: 4,
+  timeliness: 8,
+};
+
+// Calculate score using default weights and scoring logic
+const defaultScore = calculateScore(data, defaultWeights, scoringLogic);
+console.log(`Default score: ${defaultScore}`);
+
+// Update custom weights
+const customWeights = {
+  productivity: 0.4,
+  quality: 0.3,
+  timeliness: 0.3,
+};
+updateWeights(customWeights);
+
+// Calculate score using custom weights and default scoring logic
+const customScore = calculateScore(data, settings.weights, scoringLogic);
+console.log(`Custom score: ${customScore}`);
+
+// Update custom scoring logic
+const customScoringLogic = {
+  productivity: (value) => value / 50,
+  quality: (value) => value / 3,
+  timeliness: (value) => value / 5,
+};
+updateScoringLogic(customScoringLogic);
+
+// Calculate score using custom weights and custom scoring logic
+const customScore2 = calculateScore(data, settings.weights, settings.scoringLogic);
+console.log(`Custom score 2: ${customScore2}`);
+Here's a sample code for the Dashboard and Visualization, Comparative Analysis, Export and Sharing Options, and Authentication features:
+
+3.Dashboard and Visualization:
+React Code
+
+jsx
+import React, { useState, useEffect } from 'react';
+import { BarChart, PieChart, RadarChart } from 'recharts';
+
+function Dashboard() {
+  const [scores, setScores] = useState([]);
+  const [selectedEntity, setSelectedEntity] = useState('');
+
+  useEffect(() => {
+    fetch('/api/scores')
+      .then(response => response.json())
+      .then(data => setScores(data));
+  }, []);
+
+  const handleEntityChange = (event) => {
+    setSelectedEntity(event.target.value);
+  };
+
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <select value={selectedEntity} onChange={handleEntityChange}>
+        <option value="">Select Entity</option>
+        {scores.map((score) => (
+          <option key={score.entity} value={score.entity}>
+            {score.entity}
+          </option>
+        ))}
+      </select>
+      {selectedEntity && (
+        <div>
+          <BarChart data={scores.filter((score) => score.entity === selectedEntity)} />
+          <PieChart data={scores.filter((score) => score.entity === selectedEntity)} />
+          <RadarChart data={scores.filter((score) => score.entity === selectedEntity)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default Dashboard;
+
+
+4.Comparative Analysis
+React Code
+
+jsx
+import React, { useState, useEffect } from 'react';
+
+function ComparativeAnalysis() {
+  const [scores, setScores] = useState([]);
+  const [selectedEntities, setSelectedEntities] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/scores')
+      .then(response => response.json())
+      .then(data => setScores(data));
+  }, []);
+
+  const handleEntityChange = (event) => {
+    const selectedEntities = event.target.value;
+    setSelectedEntities(selectedEntities);
+  };
+
+  return (
+    <div>
+      <h1>Comparative Analysis</h1>
+      <select multiple value={selectedEntities} onChange={handleEntityChange}>
+        {scores.map((score) => (
+          <option key={score.entity} value={score.entity}>
+            {score.entity}
+          </option>
+        ))}
+      </select>
+      {selectedEntities.length > 0 && (
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th>Entity</th>
+                <th>Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedEntities.map((entity) => (
+                <tr key={entity}>
+                  <td>{entity}</td>
+                  <td>{scores.find((score) => score.entity === entity).score}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ComparativeAnalysis;
+
+5.Export and Sharing Options
+React Code
+
+jsx
+import React, { useState } from 'react';
+
+function ExportAndSharingOptions() {
+  const [scores, setScores] = useState([]);
+  const [selectedFormat, setSelectedFormat] = useState('');
+
+  const handleFormatChange = (event) => {
+    setSelectedFormat(event.target.value);
+  };
+
+  const handleExportClick = () => {
+    if (selectedFormat === 'pdf') {
+      // Export to PDF
+    } else if (selectedFormat === 'excel') {
+      // Export to Excel
+    } else if (selectedFormat === 'csv') {
+      // Export to CSV
+    }
+  };
+
+  return (
+    <div>
+      <h1>Export and Sharing Options</h1>
+      <select value={selectedFormat} onChange={handleFormatChange}>
+        <option value="">Select Format</option>
+        <option value="pdf">PDF</option>
+        <option value="excel">Excel</option>
+        <option value="csv">CSV</option>
+      </select>
+      <button onClick={handleExportClick}>Export</button>
+    </div>
+  );
+}
+
+export default ExportAndSharingOptions;
+
+
+6.Authentication (Optional)
+Node.js Code
+
+const express = require('express');
+const app = express();
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser((id, done) => {
+  // Find user by ID
+  const user = users.find((user) => user.id === id);
+  done(null, user);
+});
+
+passport.use(
+  new LocalStrategy((username, password, done) => {
+    // Find user by username
+    const user = users.find((user) => user.username === username);
+    if (!user) {
